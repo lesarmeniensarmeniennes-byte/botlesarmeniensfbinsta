@@ -126,18 +126,29 @@ Ton style : fier, inspirant, mystérieux, cinématographique, émotionnel. Jamai
 Réponds UNIQUEMENT en JSON valide, sans markdown."""
 
 def generate_content(topic: str, category: str) -> dict:
-    prompt = f"""Génère un post viral pour la page Facebook/Instagram "Les Arméniens & Arméniennes".
+    prompt = f"""Génère un post VIRAL et ÉDUCATIF pour la page Facebook/Instagram "Les Arméniens & Arméniennes".
 
 Sujet : {topic}
 Catégorie : {category}
 
+STRUCTURE OBLIGATOIRE du champ "post" (respecte les sauts de ligne) :
+1. ACCROCHE (1-2 phrases choc) — fait découvrir quelque chose de surprenant, débute par une question ou un fait renversant
+2. Ligne vide
+3. DÉVELOPPEMENT (2-3 paragraphes séparés par des lignes vides) — storytelling éducatif, chiffres ou dates marquants, anecdote sensorielle ou historique méconnue
+4. Ligne vide
+5. CHUTE ÉMOTIONNELLE (1-2 phrases) — fierté, mystère ou émotion forte qui donne envie de partager
+6. Ligne vide
+7. QUESTION D'ENGAGEMENT — question courte et directe pour les commentaires
+
+Style : cinématographique, fier, mystérieux. Jamais scolaire ni encyclopédique. 2-3 emojis max, bien placés. 280-350 mots.
+
 JSON avec ces clés exactes :
 {{
-  "titre": "titre viral (max 8 mots, très émotionnel, intrigant)",
-  "post": "texte du post (250-350 mots, hook puissant, storytelling, 2-3 emojis, question engageante finale)",
-  "cta": "call to action court",
-  "hashtags": "20 hashtags séparés par espaces, mix français/anglais, inclure #Armenie #Armenian #Armenia",
-  "image_prompt": "prompt DALL-E en anglais uniquement. Scène visuelle épique représentant {topic}. Style photo cinématographique ultra-réaliste. Lumière dramatique dorée ou crépusculaire. Aucun texte, aucun titre, aucun logo dans l'image. Juste la scène."
+  "titre": "titre viral (max 7 mots, mystérieux ou émotionnel, donne envie de lire)",
+  "post": "texte structuré comme décrit ci-dessus, avec \\n\\n entre chaque section",
+  "cta": "call to action ultra-court (max 8 mots)",
+  "hashtags": "20 hashtags séparés par espaces, mix français/anglais, inclure #Armenie #Armenian #Armenia #Culture",
+  "image_prompt": "prompt en anglais uniquement. Scène visuelle épique et cinématographique représentant {topic}. Ultra-réaliste, lumière dorée dramatique, profondeur de champ. Aucun texte, aucun titre, aucune personne visible, aucun logo. Juste la scène."
 }}"""
 
     response = client.chat.completions.create(
