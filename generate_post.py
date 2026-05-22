@@ -84,7 +84,7 @@ def save_used_topic(topic_name: str) -> None:
     used = load_used_topics()
     used.append({"topic": topic_name, "date": date.today().isoformat()})
     Path("topics_used.json").write_text(
-        json.dumps(used[-90:], ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(used[-365:], ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
 # ─── Génération du contenu (GPT-4o) ──────────────────────────────────────────
@@ -98,7 +98,7 @@ def generate_content(today: date, used_topics: list) -> dict:
     day_name     = day_names[today.weekday()]
     month_day    = (today.month, today.day)
     weekly_theme = WEEKLY_THEMES[today.weekday()]
-    recent_str   = ", ".join(t["topic"] for t in used_topics[-30:]) or "aucun"
+    recent_str   = ", ".join(t["topic"] for t in used_topics[-365:]) or "aucun"
     critical     = CRITICAL_DATES.get(month_day)
 
     if critical:
