@@ -342,10 +342,11 @@ def update_rss_feed(titre: str, post_text: str, hashtags: str, cta: str, image_f
         ET.SubElement(channel, "description").text = "Contenu culturel arménien quotidien"
         ET.SubElement(channel, "language").text    = "fr"
 
-    # Séparateur visuel avant les hashtags (style Instagram, hashtags sous le fold)
-    description = f"{post_text}\n\n👉 {cta}\n\n.\n.\n.\n\n{hashtags}"
+    # Titre mis en forme dans le corps + séparateur avant hashtags
+    # <title> vide → dlvr.it ne préfixe pas le titre dans le post social
+    description = f"✨ {titre}\n\n{post_text}\n\n👉 {cta}\n\n.\n.\n.\n\n{hashtags}"
     item = ET.Element("item")
-    ET.SubElement(item, "title").text       = titre
+    ET.SubElement(item, "title").text       = " "
     ET.SubElement(item, "description").text = description
     ET.SubElement(item, "pubDate").text     = formatdate(usegmt=True)
     ET.SubElement(item, "guid").text        = f"armenians-{date.today().isoformat()}-{int(time.time())}"
@@ -373,7 +374,7 @@ def main() -> None:
     content = generate_content(topic, category)
     print(f"✅ Texte : {content['titre']}")
 
-    image_filename = f"{date.today().isoformat()}.png"
+    image_filename = f"{date.today().isoformat()}-{int(time.time())}.png"
     generate_image(content["image_prompt"], content["titre"], category, image_filename)
     print(f"🎨 Image : images/{image_filename}")
 
