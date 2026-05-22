@@ -2,7 +2,7 @@ name: Daily Armenian Content
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 7h Paris (hiver) — 8h Paris (été)
+    - cron: '0 17 * * *'  # 19h Paris (été/CEST) — 18h Paris (hiver/CET)
   workflow_dispatch:        # Déclenchement manuel possible
 
 permissions:
