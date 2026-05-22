@@ -9,6 +9,7 @@ import json
 import math
 import random
 import requests
+import time
 from datetime import date
 from email.utils import formatdate
 from pathlib import Path
@@ -347,7 +348,7 @@ def update_rss_feed(titre: str, post_text: str, hashtags: str, cta: str, image_f
     ET.SubElement(item, "title").text       = titre
     ET.SubElement(item, "description").text = description
     ET.SubElement(item, "pubDate").text     = formatdate(usegmt=True)
-    ET.SubElement(item, "guid").text        = f"armenians-{date.today().isoformat()}"
+    ET.SubElement(item, "guid").text        = f"armenians-{date.today().isoformat()}-{int(time.time())}"
     ET.SubElement(item, "enclosure", url=image_url, type="image/png", length="0")
 
     existing = channel.findall("item")
