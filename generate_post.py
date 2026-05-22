@@ -89,8 +89,18 @@ def save_used_topic(topic_name: str) -> None:
 
 # ─── Génération du contenu (GPT-4o) ──────────────────────────────────────────
 
-SYSTEM_PROMPT = """Tu es l'éditorialiste de la page "Les Arméniens & Arméniennes".
-Ton style : fier, inspirant, mystérieux, cinématographique, émotionnel. Jamais scolaire.
+SYSTEM_PROMPT = """Tu es le créateur de contenu viral de la page Facebook/Instagram "Les Arméniens & Arméniennes" (500 000+ abonnés).
+Ta mission : chaque post doit EXPLOSER en partages, commentaires et réactions.
+
+RÈGLES VIRALES ABSOLUES :
+- L'accroche doit créer un choc immédiat : une révélation, un paradoxe, un fait que 99% des gens ignorent
+- Utilise la technique du "Je ne savais pas ça" → les gens partagent ce qui les a surpris
+- Crée de l'émotion FORTE : fierté, indignation, admiration, nostalgie, mystère
+- Le post doit donner l'impression de révéler un secret ou une vérité cachée
+- Toujours finir sur quelque chose qui OBLIGE le lecteur à commenter ou partager
+- Style : cinématographique, percutant, jamais scolaire ni encyclopédique
+- Chaque phrase doit avoir un rôle : supprimer = perte de force
+
 Réponds UNIQUEMENT en JSON valide, sans markdown."""
 
 def generate_content(today: date, used_topics: list) -> dict:
@@ -119,26 +129,45 @@ Choisis un sujet original, inspirant, peu connu si possible."""
 
 Sujets récents à NE PAS répéter : {recent_str}
 
-STRUCTURE OBLIGATOIRE du champ "post" (respecte les sauts de ligne) :
-1. ACCROCHE (1-2 phrases choc) — fait découvrir quelque chose de surprenant, débute par une question ou un fait renversant
-2. Ligne vide
-3. DÉVELOPPEMENT (2-3 paragraphes séparés par des lignes vides) — storytelling éducatif, chiffres ou dates marquants, anecdote sensorielle ou historique méconnue
-4. Ligne vide
-5. CHUTE ÉMOTIONNELLE (1-2 phrases) — fierté, mystère ou émotion forte qui donne envie de partager
-6. Ligne vide
-7. QUESTION D'ENGAGEMENT — question courte et directe pour les commentaires
+━━━ STRUCTURE VIRALE OBLIGATOIRE du champ "post" ━━━
 
-Style : cinématographique, fier, mystérieux. Jamais scolaire ni encyclopédique. 2-3 emojis max, bien placés. 280-350 mots.
+① HOOK EXPLOSIF (1-2 phrases MAX)
+→ Commence par un fait que 99% des gens ignorent, une révélation choc, ou un paradoxe fascinant
+→ Formats qui fonctionnent : "Saviez-vous que..." / "Ce que l'histoire n'a jamais dit sur..." / un chiffre stupéfiant / une comparaison inattendue
+→ JAMAIS de phrase d'introduction banale. Frappe fort dès le premier mot.
+
+[ligne vide]
+
+② DÉVELOPPEMENT CINÉMATOGRAPHIQUE (2-3 paragraphes, lignes vides entre chaque)
+→ Raconte une histoire comme une scène de film : montre, ne raconte pas
+→ Inclure : 1 détail sensoriel (odeur, couleur, son, texture), 1 chiffre précis, 1 anecdote méconnue
+→ Crée de la tension narrative : le lecteur doit vouloir la suite
+
+[ligne vide]
+
+③ CHUTE ÉMOTIONNELLE (2 phrases)
+→ Crée un frisson de fierté, d'admiration ou de mystère
+→ Doit donner envie de PARTAGER pour montrer à ses proches
+
+[ligne vide]
+
+④ QUESTION D'ENGAGEMENT (1 phrase directe)
+→ Question qui divise, surprend, ou invite à partager un souvenir personnel
+→ Doit provoquer des commentaires, pas juste des likes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STYLE : 2-3 emojis max (jamais en début de paragraphe), 280-350 mots, chaque phrase compte.
 
 JSON avec ces clés exactes :
 {{
   "sujet": "sujet choisi en 3-6 mots (mémorisation anti-doublon)",
   "categorie": "catégorie du sujet",
-  "titre": "titre viral (max 7 mots, mystérieux ou émotionnel, donne envie de lire)",
-  "post": "texte structuré comme décrit ci-dessus, avec \\n\\n entre chaque section",
-  "cta": "call to action ultra-court (max 8 mots)",
-  "hashtags": "20 hashtags séparés par espaces, mix français/anglais, inclure #Armenie #Armenian #Armenia #Culture",
-  "image_prompt": "prompt en anglais uniquement. Scène visuelle épique et cinématographique. Ultra-réaliste, lumière dorée dramatique, profondeur de champ. Aucun texte, aucun titre, aucune personne visible, aucun logo. Juste la scène représentant le sujet choisi."
+  "titre": "titre viral (max 7 mots) — mystérieux, émotionnel ou choc. Exemples de formats : 'Le secret...' / 'Ce que personne ne sait sur...' / 'L'histoire vraie de...' / un chiffre renversant",
+  "post": "texte structuré EXACTEMENT comme décrit ci-dessus, avec \\n\\n entre chaque section",
+  "cta": "call to action court et fort (max 8 mots) — doit donner envie d'agir",
+  "hashtags": "20 hashtags séparés par espaces, mix français/anglais/arménien, inclure #Armenie #Armenian #Armenia #Culture",
+  "image_prompt": "prompt en anglais uniquement. Cinematic, photorealistic scene. Dramatic golden light, deep shadows, epic atmosphere. NO text, NO people, NO logos. Only the environment/object/scene that represents the subject. Shot like a movie still."
 }}"""
 
     response = client.chat.completions.create(
