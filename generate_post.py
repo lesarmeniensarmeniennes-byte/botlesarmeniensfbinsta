@@ -355,7 +355,7 @@ def update_rss_feed(titre: str, post_text: str, hashtags: str, cta: str, image_f
 
     # Titre mis en forme dans le corps + séparateur avant hashtags
     # <title> vide → dlvr.it ne préfixe pas le titre dans le post social
-    description = f"✨ {titre}\n\n{post_text}\n\n👉 {cta}\n\n.\n.\n.\n\n{hashtags}"
+    description = f"✨ {titre}\n\n{post_text}\n\n👉 {cta}\n\n{hashtags}"
     item = ET.Element("item")
     ET.SubElement(item, "title").text       = " "
     ET.SubElement(item, "description").text = description
