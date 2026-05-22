@@ -7,7 +7,6 @@ Génère quotidiennement un post viral + image composite pour Facebook/Instagram
 import os
 import json
 import math
-import random
 import requests
 import time
 from datetime import date
@@ -53,53 +52,27 @@ def _font(size: int) -> ImageFont.FreeTypeFont:
 
 # ─── Banque de sujets ─────────────────────────────────────────────────────────
 
-TOPICS = [
-    {"topic": "Monastère de Tatev",                     "category": "Lieux sacrés"},
-    {"topic": "Monastère de Geghard",                   "category": "Lieux sacrés"},
-    {"topic": "Khor Virap",                             "category": "Lieux sacrés"},
-    {"topic": "Noravank",                               "category": "Lieux sacrés"},
-    {"topic": "Monastère de Haghpat",                   "category": "Lieux sacrés"},
-    {"topic": "Monastère de Sanahin",                   "category": "Lieux sacrés"},
-    {"topic": "Cathédrale d'Etchmiadzin",               "category": "Lieux sacrés"},
-    {"topic": "Temple de Garni",                        "category": "Arménie antique"},
-    {"topic": "Lac Sevan",                              "category": "Lieux à visiter"},
-    {"topic": "Dilijan, la forêt arménienne",           "category": "Lieux à visiter"},
-    {"topic": "Jermuk et ses sources thermales",        "category": "Lieux à visiter"},
-    {"topic": "Gyumri, ville de culture",               "category": "Lieux à visiter"},
-    {"topic": "Erevan, la ville rose",                  "category": "Lieux à visiter"},
-    {"topic": "Khorovats, le BBQ arménien",             "category": "Gastronomie"},
-    {"topic": "La Dolma arménienne",                    "category": "Gastronomie"},
-    {"topic": "Harissa, plat de résistance",            "category": "Gastronomie"},
-    {"topic": "Le Lavash sacré",                        "category": "Traditions"},
-    {"topic": "Gata, douceur de grand-mère",            "category": "Gastronomie"},
-    {"topic": "Basturma, viande d'exception",           "category": "Gastronomie"},
-    {"topic": "Lahmajoun arménien",                     "category": "Gastronomie"},
-    {"topic": "Pakhlava arménienne",                    "category": "Gastronomie"},
-    {"topic": "Le café arménien",                       "category": "Traditions"},
-    {"topic": "Tigranes le Grand",                      "category": "Histoire"},
-    {"topic": "Vartan Mamikonian",                      "category": "Histoire"},
-    {"topic": "La bataille d'Avarayr 451",              "category": "Histoire"},
-    {"topic": "La Route de la Soie et l'Arménie",       "category": "Histoire"},
-    {"topic": "Haïk, père de la nation arménienne",     "category": "Mythologie"},
-    {"topic": "Ara le Beau et Sémiramis",               "category": "Mythologie"},
-    {"topic": "Le Mont Ararat, symbole éternel",        "category": "Symboles"},
-    {"topic": "Les Khachkars, croix de pierre",         "category": "Artisanat"},
-    {"topic": "L'alphabet arménien de Mesrop Mashtots", "category": "Culture"},
-    {"topic": "La danse Kochari",                       "category": "Traditions"},
-    {"topic": "Les mariages arméniens traditionnels",   "category": "Traditions"},
-    {"topic": "Vardavar, la fête de l'eau",             "category": "Fêtes"},
-    {"topic": "Navasard, le Nouvel An arménien",        "category": "Fêtes"},
-    {"topic": "Le duduk, instrument de l'âme",          "category": "Musique"},
-    {"topic": "Les fêtes religieuses arméniennes",      "category": "Fêtes"},
-    {"topic": "Charles Aznavour",                       "category": "Diaspora"},
-    {"topic": "William Saroyan",                        "category": "Diaspora"},
-    {"topic": "Atom Egoyan, cinéaste arménien",         "category": "Diaspora"},
-    {"topic": "Les Arméniens à Paris",                  "category": "Diaspora"},
-    {"topic": "La diaspora arménienne aux États-Unis",  "category": "Diaspora"},
-    {"topic": "Les villages oubliés d'Arménie",         "category": "Mystères"},
-    {"topic": "Les légendes du Lac Sevan",              "category": "Légendes"},
-    {"topic": "Les coutumes de protection arméniennes", "category": "Traditions"},
-]
+# ─── Dates critiques arméniennes (priorité absolue) ──────────────────────────
+
+CRITICAL_DATES = {
+    (4, 24): "Journée de commémoration du Génocide arménien — 1,5 million de martyrs",
+    (5, 28): "Fête de l'Indépendance de la Première République d'Arménie (28 mai 1918)",
+    (9, 21): "Fête nationale de l'Arménie — Indépendance (21 septembre 1991)",
+    (1,  6): "Noël arménien apostolique — Nativité et Épiphanie",
+    (8, 11): "Navasard — Nouvel An arménien traditionnel",
+}
+
+# ─── Rotation thématique hebdomadaire ────────────────────────────────────────
+
+WEEKLY_THEMES = {
+    0: "Histoire arménienne",           # Lundi
+    1: "Culture & Traditions",          # Mardi
+    2: "Légendes & Mythologie",         # Mercredi
+    3: "Gastronomie arménienne",        # Jeudi
+    4: "Diaspora & Personnalités",      # Vendredi
+    5: "Lieux à visiter en Arménie",    # Samedi
+    6: "Spiritualité & Lieux sacrés",   # Dimanche
+}
 
 # ─── Gestion des sujets utilisés ─────────────────────────────────────────────
 
@@ -114,22 +87,37 @@ def save_used_topic(topic_name: str) -> None:
         json.dumps(used[-90:], ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
-def pick_topic(used_topics: list) -> dict:
-    recent    = {t["topic"] for t in used_topics[-30:]}
-    available = [t for t in TOPICS if t["topic"] not in recent] or TOPICS
-    return random.choice(available)
-
 # ─── Génération du contenu (GPT-4o) ──────────────────────────────────────────
 
-SYSTEM_PROMPT = """Tu es un expert en storytelling viral et culture arménienne pour la page "Les Arméniens & Arméniennes".
+SYSTEM_PROMPT = """Tu es l'éditorialiste de la page "Les Arméniens & Arméniennes".
 Ton style : fier, inspirant, mystérieux, cinématographique, émotionnel. Jamais scolaire.
 Réponds UNIQUEMENT en JSON valide, sans markdown."""
 
-def generate_content(topic: str, category: str) -> dict:
-    prompt = f"""Génère un post VIRAL et ÉDUCATIF pour la page Facebook/Instagram "Les Arméniens & Arméniennes".
+def generate_content(today: date, used_topics: list) -> dict:
+    day_names    = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+    day_name     = day_names[today.weekday()]
+    month_day    = (today.month, today.day)
+    weekly_theme = WEEKLY_THEMES[today.weekday()]
+    recent_str   = ", ".join(t["topic"] for t in used_topics[-30:]) or "aucun"
+    critical     = CRITICAL_DATES.get(month_day)
 
-Sujet : {topic}
-Catégorie : {category}
+    if critical:
+        sujet_instruction = f"""🔴 DATE PRIORITAIRE — Tu DOIS écrire sur ce sujet aujourd'hui :
+{critical}
+Traite ce sujet avec solennité, émotion et profondeur historique."""
+    else:
+        sujet_instruction = f"""Aujourd'hui est le {today.day} {today.strftime("%B")} {today.year} ({day_name}).
+
+ÉTAPE 1 — Vérifie dans ta connaissance : y a-t-il un événement arménien notable lié au {today.day} {today.strftime("%B")} \
+(naissance ou disparition d'une personnalité arménienne, événement historique survenu ce jour précis) ?
+→ Si oui : écris sur cet événement.
+
+ÉTAPE 2 — Si aucun événement notable ce jour précis : le thème du jour est "{weekly_theme}".
+Choisis un sujet original, inspirant, peu connu si possible."""
+
+    prompt = f"""{sujet_instruction}
+
+Sujets récents à NE PAS répéter : {recent_str}
 
 STRUCTURE OBLIGATOIRE du champ "post" (respecte les sauts de ligne) :
 1. ACCROCHE (1-2 phrases choc) — fait découvrir quelque chose de surprenant, débute par une question ou un fait renversant
@@ -144,11 +132,13 @@ Style : cinématographique, fier, mystérieux. Jamais scolaire ni encyclopédiqu
 
 JSON avec ces clés exactes :
 {{
+  "sujet": "sujet choisi en 3-6 mots (mémorisation anti-doublon)",
+  "categorie": "catégorie du sujet",
   "titre": "titre viral (max 7 mots, mystérieux ou émotionnel, donne envie de lire)",
   "post": "texte structuré comme décrit ci-dessus, avec \\n\\n entre chaque section",
   "cta": "call to action ultra-court (max 8 mots)",
   "hashtags": "20 hashtags séparés par espaces, mix français/anglais, inclure #Armenie #Armenian #Armenia #Culture",
-  "image_prompt": "prompt en anglais uniquement. Scène visuelle épique et cinématographique représentant {topic}. Ultra-réaliste, lumière dorée dramatique, profondeur de champ. Aucun texte, aucun titre, aucune personne visible, aucun logo. Juste la scène."
+  "image_prompt": "prompt en anglais uniquement. Scène visuelle épique et cinématographique. Ultra-réaliste, lumière dorée dramatique, profondeur de champ. Aucun texte, aucun titre, aucune personne visible, aucun logo. Juste la scène représentant le sujet choisi."
 }}"""
 
     response = client.chat.completions.create(
@@ -376,16 +366,17 @@ def update_rss_feed(titre: str, post_text: str, hashtags: str, cta: str, image_f
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    used   = load_used_topics()
-    chosen = pick_topic(used)
-    topic, category = chosen["topic"], chosen["category"]
+    today   = date.today()
+    used    = load_used_topics()
 
-    print(f"📅 {date.today()}  |  {topic}  ({category})")
+    content  = generate_content(today, used)
+    topic    = content["sujet"]
+    category = content["categorie"]
 
-    content = generate_content(topic, category)
+    print(f"📅 {today}  |  {topic}  ({category})")
     print(f"✅ Texte : {content['titre']}")
 
-    image_filename = f"{date.today().isoformat()}-{int(time.time())}.png"
+    image_filename = f"{today.isoformat()}-{int(time.time())}.png"
     generate_image(content["image_prompt"], content["titre"], category, image_filename)
     print(f"🎨 Image : images/{image_filename}")
 
@@ -399,7 +390,7 @@ def main() -> None:
     print("📡 RSS mis à jour")
 
     save_used_topic(topic)
-    print(f"💾 Sujet sauvegardé")
+    print(f"💾 Sujet sauvegardé : {topic}")
 
 if __name__ == "__main__":
     main()
