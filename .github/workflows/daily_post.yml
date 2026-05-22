@@ -1,0 +1,46 @@
+name: Daily Armenian Content
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 7h Paris (hiver) — 8h Paris (été)
+  workflow_dispatch:        # Déclenchement manuel possible
+
+permissions:
+  contents: write
+
+jobs:
+  generate-post:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install system fonts
+        run: sudo apt-get install -y fonts-ubuntu fonts-liberation
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate daily content
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          REPO_OWNER:     ${{ github.repository_owner }}
+          REPO_NAME:      ${{ github.event.repository.name }}
+        run: python generate_post.py
+
+      - name: Commit and push
+        run: |
+          git config user.name  "Armenian Content Bot"
+          git config user.email "bot@armenians.page"
+          git add feed.xml images/ topics_used.json
+          git diff --staged --quiet || git commit -m "📅 Post du $(date +%Y-%m-%d)"
+          git push
