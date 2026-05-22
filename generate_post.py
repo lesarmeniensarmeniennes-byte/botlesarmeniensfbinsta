@@ -190,43 +190,11 @@ def compose_image(raw_photo_path: str, titre: str, category: str, output_path: s
     canvas = Image.new("RGB", (W, H), BG)
     draw   = ImageDraw.Draw(canvas)
 
-    # ── 1. Logo haut-gauche (logo_square.png, fond noir transparent) ─────────
-    sq_path = Path("assets/logo_square.png")
-    if sq_path.exists():
-        sq = Image.open(sq_path).convert("RGBA").resize((_LOGO_SQ, _LOGO_SQ), Image.LANCZOS)
-        canvas.paste(sq.convert("RGB"), (12, 10))
-    else:
-        # fallback cercle flag arménien
-        s = _LOGO_SQ
-        tmp = Image.new("RGB", (s, s), BG)
-        td  = ImageDraw.Draw(tmp)
-        r   = s // 2 - 4
-        cx  = cy = s // 2
-        third = (r * 2) // 3
-        top   = cy - r
-        for i, col in enumerate([RED_BADGE, (82, 82, 170), ORANGE]):
-            td.rectangle([(cx-r, top+i*third), (cx+r, top+(i+1)*third+2)], fill=col)
-        mask = Image.new("L", (s, s), 0)
-        ImageDraw.Draw(mask).ellipse([(cx-r, cy-r), (cx+r, cy+r)], fill=255)
-        tmp.putalpha(mask)
-        canvas.paste(tmp.convert("RGB"), (12, 10), mask=mask)
-
-    # ── 2. Cadre blanc + photo ────────────────────────────────────────────────
-    px0 = _PHOTO_M
-    py0 = _PHOTO_Y
-    px1 = W - _PHOTO_M
-    py1 = _PHOTO_Y + _PHOTO_H
-
-    # cadre blanc
-    draw.rectangle([(px0, py0), (px1, py1)], fill=WHITE)
-
-    # photo dans le cadre (avec marge intérieure = _PHOTO_FR)
-    ip0x = px0 + _PHOTO_FR
-    ip0y = py0 + _PHOTO_FR
-    ip1x = px1 - _PHOTO_FR
-    ip1y = py1 - _PHOTO_FR
-    ph_w = ip1x - ip0x
-    ph_h = ip1y - ip0y
+    # ── 1. Photo pleine largeur (sans cadre blanc) ────────────────────────────
+    py0  = _PHOTO_Y
+    py1  = _PHOTO_Y + _PHOTO_H
+    ph_w = W
+    ph_h = _PHOTO_H
 
     photo  = Image.open(raw_photo_path).convert("RGB")
     pw, pph = photo.size
@@ -235,7 +203,42 @@ def compose_image(raw_photo_path: str, titre: str, category: str, output_path: s
     ox     = (photo.width  - ph_w) // 2
     oy     = (photo.height - ph_h) // 2
     photo  = photo.crop((ox, oy, ox + ph_w, oy + ph_h))
-    canvas.paste(photo, (ip0x, ip0y))
+    canvas.paste(photo, (0, py0))
+
+    # Gradient subtil bas de la photo → fond noir
+    grad = Image.new("RGBA", (W, 80), (0, 0, 0, 0))
+    gd   = ImageDraw.Draw(grad)
+    for i in range(80):
+        gd.line([(0, i), (W, i)], fill=(*BG, int(255 * (i / 79))))
+    base = canvas.convert("RGBA")
+    base.paste(grad, (0, py1 - 80), mask=grad.split()[3])
+    canvas = base.convert("RGB")
+    draw   = ImageDraw.Draw(canvas)
+
+    # ── 2. Logo haut-gauche ROND ──────────────────────────────────────────────
+    sq_path = Path("assets/logo_square.png")
+    s       = _LOGO_SQ
+    if sq_path.exists():
+        sq   = Image.open(sq_path).convert("RGBA").resize((s, s), Image.LANCZOS)
+    else:
+        # fallback : cercle drapeau arménien
+        sq  = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+        sd  = ImageDraw.Draw(sq)
+        r   = s // 2 - 2
+        cx  = cy = s // 2
+        third = (r * 2) // 3
+        top   = cy - r
+        for i, col in enumerate([RED_BADGE, (82, 82, 170), ORANGE]):
+            sd.rectangle([(cx-r, top+i*third), (cx+r, top+(i+1)*third+2)], fill=(*col, 255))
+        mask_tmp = Image.new("L", (s, s), 0)
+        ImageDraw.Draw(mask_tmp).ellipse([(cx-r, cy-r), (cx+r, cy+r)], fill=255)
+        sq.putalpha(mask_tmp)
+
+    # masque circulaire sur le logo (rond parfait)
+    circ_mask = Image.new("L", (s, s), 0)
+    ImageDraw.Draw(circ_mask).ellipse([(0, 0), (s - 1, s - 1)], fill=255)
+    sq.putalpha(circ_mask)
+    canvas.paste(sq.convert("RGB"), (14, 14), mask=circ_mask)
 
     # ── 3. Titre (grand, blanc, centré) ──────────────────────────────────────
     title_area_y = py1 + 30
