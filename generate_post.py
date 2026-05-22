@@ -173,7 +173,7 @@ _PHOTO_M   = 22     # marge autour de la photo
 _PHOTO_FR  = 8      # épaisseur cadre blanc
 _PHOTO_Y   = 160    # y début photo
 _PHOTO_H   = 520    # hauteur photo
-_BANNER_H  = 140    # hauteur réservée bannière bas
+_BANNER_H  = 200    # hauteur cible bannière bas (crop centré)
 
 def _wrap_text(draw, text, font, max_w):
     words, lines, cur = text.split(), [], []
@@ -262,14 +262,20 @@ def compose_image(raw_photo_path: str, titre: str, category: str, output_path: s
         draw.text((tx, ty), line, font=fnt, fill=WHITE)
         ty += lh + 18
 
-    # ── 4. Bannière logo bas ──────────────────────────────────────────────────
+    # ── 4. Bannière logo bas (crop centré, hauteur fixe _BANNER_H) ───────────
     banner_path = Path("assets/logo_banner.png")
     if banner_path.exists():
-        banner    = Image.open(banner_path).convert("RGB")
-        bw_target = W
-        bh_target = int(banner.height * bw_target / banner.width)
-        banner    = banner.resize((bw_target, bh_target), Image.LANCZOS)
-        by        = H - bh_target
+        banner  = Image.open(banner_path).convert("RGB")
+        # Mise à l'échelle pleine largeur
+        scale   = W / banner.width
+        bw      = W
+        bh_raw  = int(banner.height * scale)
+        banner  = banner.resize((bw, bh_raw), Image.LANCZOS)
+        # Crop centré verticalement pour garder le cercle + texte sans étirement
+        if bh_raw > _BANNER_H:
+            oy     = (bh_raw - _BANNER_H) // 2
+            banner = banner.crop((0, oy, bw, oy + _BANNER_H))
+        by = H - _BANNER_H
         canvas.paste(banner, (0, by))
     else:
         by = H - 100
