@@ -151,118 +151,134 @@ JSON avec ces clés exactes :
     return json.loads(response.choices[0].message.content)
 
 # ─── Compositing image (Pillow) ───────────────────────────────────────────────
+#
+#  Layout exact (ref: Les Arméniens & Arméniennes)
+#
+#  ┌─────────────────────────────────┐  y=0
+#  │ [logo_square ~140px]            │  haut-gauche
+#  │  ┌───────────────────────────┐  │
+#  │  │   PHOTO  (cadre blanc)    │  │  y=155 → y=700
+#  │  └───────────────────────────┘  │
+#  │                                 │
+#  │   TITRE ACCROCHEUR              │  grand, blanc, centré
+#  │                                 │
+#  │  ─────────────────────────────  │
+#  │  [○]  LES ARMÉNIENS & ...       │  bannière logo bas
+#  │  ─────────────────────────────  │
+#  └─────────────────────────────────┘  y=1350
 
-def _wrap_text(draw: ImageDraw.Draw, text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]:
-    words, lines, current = text.split(), [], []
-    for word in words:
-        test = " ".join(current + [word])
-        if draw.textbbox((0, 0), test, font=font)[2] > max_w and current:
-            lines.append(" ".join(current))
-            current = [word]
+# ── dimensions internes ───────────────────────────────────────────────────────
+_LOGO_SQ   = 150    # taille logo carré haut-gauche
+_PHOTO_M   = 22     # marge autour de la photo
+_PHOTO_FR  = 8      # épaisseur cadre blanc
+_PHOTO_Y   = 160    # y début photo
+_PHOTO_H   = 520    # hauteur photo
+_BANNER_H  = 140    # hauteur réservée bannière bas
+
+def _wrap_text(draw, text, font, max_w):
+    words, lines, cur = text.split(), [], []
+    for w in words:
+        test = " ".join(cur + [w])
+        if draw.textbbox((0, 0), test, font=font)[2] > max_w and cur:
+            lines.append(" ".join(cur)); cur = [w]
         else:
-            current.append(word)
-    if current:
-        lines.append(" ".join(current))
+            cur.append(w)
+    if cur: lines.append(" ".join(cur))
     return lines
 
-def _draw_gradient(canvas: Image.Image, y_start: int, height: int) -> Image.Image:
-    overlay = Image.new("RGBA", (W, height), (0, 0, 0, 0))
-    d = ImageDraw.Draw(overlay)
-    for i in range(height):
-        alpha = int(255 * math.sqrt(i / (height - 1)))
-        d.line([(0, i), (W, i)], fill=(*BG, alpha))
-    base = canvas.convert("RGBA")
-    base.paste(overlay, (0, y_start), mask=overlay.split()[3])
-    return base.convert("RGB")
-
 def compose_image(raw_photo_path: str, titre: str, category: str, output_path: str) -> None:
-    # ── 1. Canvas + photo ───────────────────────────────────────────────────
     canvas = Image.new("RGB", (W, H), BG)
-    photo  = Image.open(raw_photo_path).convert("RGB")
-    pw, ph = photo.size
-    scale  = max(W / pw, (PHOTO_H + 60) / ph)
-    photo  = photo.resize((int(pw * scale), int(ph * scale)), Image.LANCZOS)
-    ox     = (photo.width - W) // 2
-    photo  = photo.crop((ox, 0, ox + W, PHOTO_H + 60))
-    canvas.paste(photo, (0, 0))
-
-    # ── 2. Gradient photo → noir ────────────────────────────────────────────
-    canvas = _draw_gradient(canvas, PHOTO_H - 100, 160)
     draw   = ImageDraw.Draw(canvas)
 
-    # ── 3. Badge catégorie (trapèze rouge, bas-gauche de la photo) ──────────
-    font_cat  = _font(28)
-    badge_txt = category.upper()
-    bb        = draw.textbbox((0, 0), badge_txt, font=font_cat)
-    bw        = bb[2] - bb[0] + 44
-    by        = PHOTO_H - 58
-    bh        = 46
-    draw.polygon([(0, by), (bw + 18, by), (bw, by + bh), (0, by + bh)], fill=RED_BADGE)
-    draw.text((16, by + 10), badge_txt, font=font_cat, fill=WHITE)
-
-    # ── 4. Titre ─────────────────────────────────────────────────────────────
-    font_lg = _font(84)
-    font_sm = _font(68)
-    lines   = _wrap_text(draw, titre.upper(), font_lg, W - MARGIN * 2)
-
-    ty = PHOTO_H + 28
-    # Couleurs : ligne 1 et dernière → ORANGE, les autres → BLANC
-    # Ligne du milieu → highlight bleu
-    mid = len(lines) // 2
-    for i, line in enumerate(lines[:6]):
-        font  = font_lg if i < 4 else font_sm
-        color = ORANGE if (i == 0 or i == len(lines) - 1) else WHITE
-        bb    = draw.textbbox((MARGIN, ty), line, font=font)
-        lh    = bb[3] - bb[1]
-
-        if i == mid and len(lines) >= 3:
-            pad = 10
-            draw.rectangle(
-                [(MARGIN - pad, ty - pad // 2), (bb[2] + pad, ty + lh + pad // 2)],
-                fill=BLUE_HL,
-            )
-
-        draw.text((MARGIN, ty), line, font=font, fill=color)
-        ty += lh + 14
-
-    # ── 5. Logo haut-gauche (logo_square.png = logo carré fond noir) ────────
+    # ── 1. Logo haut-gauche (logo_square.png, fond noir transparent) ─────────
     sq_path = Path("assets/logo_square.png")
     if sq_path.exists():
-        sq   = Image.open(sq_path).convert("RGBA").resize((105, 105), Image.LANCZOS)
-        mask = Image.new("L", (105, 105), 0)
-        ImageDraw.Draw(mask).ellipse([(0, 0), (104, 104)], fill=255)
-        sq.putalpha(mask)
-        canvas.paste(sq, (MARGIN, MARGIN), mask=sq.split()[3])
+        sq = Image.open(sq_path).convert("RGBA").resize((_LOGO_SQ, _LOGO_SQ), Image.LANCZOS)
+        canvas.paste(sq.convert("RGB"), (12, 10))
     else:
-        cx, cy, cr = MARGIN, MARGIN, 40
-        draw.ellipse([(cx, cy), (cx + cr * 2, cy + cr * 2)], fill=WHITE)
-        draw.text((cx + 12, cy + 14), "LA", font=_font(22), fill=BG)
+        # fallback cercle flag arménien
+        s = _LOGO_SQ
+        tmp = Image.new("RGB", (s, s), BG)
+        td  = ImageDraw.Draw(tmp)
+        r   = s // 2 - 4
+        cx  = cy = s // 2
+        third = (r * 2) // 3
+        top   = cy - r
+        for i, col in enumerate([RED_BADGE, (82, 82, 170), ORANGE]):
+            td.rectangle([(cx-r, top+i*third), (cx+r, top+(i+1)*third+2)], fill=col)
+        mask = Image.new("L", (s, s), 0)
+        ImageDraw.Draw(mask).ellipse([(cx-r, cy-r), (cx+r, cy+r)], fill=255)
+        tmp.putalpha(mask)
+        canvas.paste(tmp.convert("RGB"), (12, 10), mask=mask)
 
-    # ── 6. Bannière logo bas (logo_banner.png = bannière horizontale) ────────
+    # ── 2. Cadre blanc + photo ────────────────────────────────────────────────
+    px0 = _PHOTO_M
+    py0 = _PHOTO_Y
+    px1 = W - _PHOTO_M
+    py1 = _PHOTO_Y + _PHOTO_H
+
+    # cadre blanc
+    draw.rectangle([(px0, py0), (px1, py1)], fill=WHITE)
+
+    # photo dans le cadre (avec marge intérieure = _PHOTO_FR)
+    ip0x = px0 + _PHOTO_FR
+    ip0y = py0 + _PHOTO_FR
+    ip1x = px1 - _PHOTO_FR
+    ip1y = py1 - _PHOTO_FR
+    ph_w = ip1x - ip0x
+    ph_h = ip1y - ip0y
+
+    photo  = Image.open(raw_photo_path).convert("RGB")
+    pw, pph = photo.size
+    scale  = max(ph_w / pw, ph_h / pph)
+    photo  = photo.resize((int(pw * scale), int(pph * scale)), Image.LANCZOS)
+    ox     = (photo.width  - ph_w) // 2
+    oy     = (photo.height - ph_h) // 2
+    photo  = photo.crop((ox, oy, ox + ph_w, oy + ph_h))
+    canvas.paste(photo, (ip0x, ip0y))
+
+    # ── 3. Titre (grand, blanc, centré) ──────────────────────────────────────
+    title_area_y = py1 + 30
+    title_area_h = H - _BANNER_H - title_area_y - 10
+    max_w        = W - MARGIN * 2
+
+    # taille de police adaptative
+    for fsize in [108, 92, 78, 66]:
+        fnt   = _font(fsize)
+        lines = _wrap_text(draw, titre.upper(), fnt, max_w)
+        total = sum(draw.textbbox((0,0), l, font=fnt)[3] - draw.textbbox((0,0), l, font=fnt)[1] + 18
+                    for l in lines)
+        if total <= title_area_h or fsize == 66:
+            break
+
+    ty = title_area_y + (title_area_h - total) // 2
+    for line in lines:
+        bb  = draw.textbbox((0, 0), line, font=fnt)
+        lh  = bb[3] - bb[1]
+        tx  = (W - (bb[2] - bb[0])) // 2
+        draw.text((tx, ty), line, font=fnt, fill=WHITE)
+        ty += lh + 18
+
+    # ── 4. Bannière logo bas ──────────────────────────────────────────────────
     banner_path = Path("assets/logo_banner.png")
-    bar_y       = H - 140
-
     if banner_path.exists():
-        banner   = Image.open(banner_path).convert("RGBA")
-        # Conserver le ratio — largeur pleine page, hauteur proportionnelle
-        bw_target = W - 80
+        banner    = Image.open(banner_path).convert("RGB")
+        bw_target = W
         bh_target = int(banner.height * bw_target / banner.width)
         banner    = banner.resize((bw_target, bh_target), Image.LANCZOS)
-        bx        = (W - bw_target) // 2
-        by        = H - bh_target - 30
-        canvas.paste(banner, (bx, by), mask=banner.split()[3])
+        by        = H - bh_target
+        canvas.paste(banner, (0, by))
     else:
-        # Fallback : barre blanche avec texte
-        bar_h, bar_mx = 68, 80
-        draw.rectangle([(bar_mx, bar_y), (W - bar_mx, bar_y + bar_h)], fill=WHITE)
-        fb  = _font(26)
+        by = H - 100
+        draw.line([(MARGIN, by),     (W - MARGIN, by)],     fill=WHITE, width=2)
+        draw.line([(MARGIN, by + 80),(W - MARGIN, by + 80)], fill=WHITE, width=2)
+        fb  = _font(28)
         txt = "Les Arméniens & Arméniennes"
         bb  = draw.textbbox((0, 0), txt, font=fb)
-        tx  = (W - (bb[2] - bb[0])) // 2
-        draw.text((tx, bar_y + (bar_h - (bb[3] - bb[1])) // 2), txt, font=fb, fill=BG)
+        draw.text(((W - bb[2] + bb[0]) // 2, by + 18), txt, font=fb, fill=WHITE)
 
     canvas.save(output_path, "PNG")
-    print(f"  ✔ Compositing terminé → {output_path}")
+    print(f"  ✔ Compositing → {output_path}")
 
 # ─── Génération photo + compositing ──────────────────────────────────────────
 
