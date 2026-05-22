@@ -133,7 +133,7 @@ Catégorie : {category}
 JSON avec ces clés exactes :
 {{
   "titre": "titre viral (max 8 mots, très émotionnel, intrigant)",
-  "post": "texte du post (150-300 mots, hook puissant, storytelling, quelques emojis, question engageante finale)",
+  "post": "texte du post (max 200 mots, hook puissant, storytelling, 2-3 emojis, question engageante finale)",
   "cta": "call to action court",
   "hashtags": "20 hashtags séparés par espaces, mix français/anglais, inclure #Armenie #Armenian #Armenia",
   "image_prompt": "prompt DALL-E en anglais uniquement. Scène visuelle épique représentant {topic}. Style photo cinématographique ultra-réaliste. Lumière dramatique dorée ou crépusculaire. Aucun texte, aucun titre, aucun logo dans l'image. Juste la scène."
@@ -275,6 +275,13 @@ def compose_image(raw_photo_path: str, titre: str, category: str, output_path: s
         if bh_raw > _BANNER_H:
             oy     = (bh_raw - _BANNER_H) // 2
             banner = banner.crop((0, oy, bw, oy + _BANNER_H))
+        # Harmoniser fond bannière avec le canvas : les pixels sombres (JPEG ≈20)
+        # sont remappés à BG (12,12,12) pour supprimer la seam visible
+        r_lut = [BG[0] if v < 28 else v for v in range(256)]
+        g_lut = [BG[1] if v < 28 else v for v in range(256)]
+        b_lut = [BG[2] if v < 28 else v for v in range(256)]
+        r, g, b = banner.split()
+        banner = Image.merge("RGB", [r.point(r_lut), g.point(g_lut), b.point(b_lut)])
         by = H - _BANNER_H
         canvas.paste(banner, (0, by))
     else:
@@ -334,7 +341,8 @@ def update_rss_feed(titre: str, post_text: str, hashtags: str, cta: str, image_f
         ET.SubElement(channel, "description").text = "Contenu culturel arménien quotidien"
         ET.SubElement(channel, "language").text    = "fr"
 
-    description = f"{post_text}\n\n{cta}\n\n{hashtags}"
+    # Séparateur visuel avant les hashtags (style Instagram, hashtags sous le fold)
+    description = f"{post_text}\n\n👉 {cta}\n\n.\n.\n.\n\n{hashtags}"
     item = ET.Element("item")
     ET.SubElement(item, "title").text       = titre
     ET.SubElement(item, "description").text = description
