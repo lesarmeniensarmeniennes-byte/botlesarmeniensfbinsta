@@ -133,7 +133,7 @@ Catégorie : {category}
 JSON avec ces clés exactes :
 {{
   "titre": "titre viral (max 8 mots, très émotionnel, intrigant)",
-  "post": "texte du post (max 200 mots, hook puissant, storytelling, 2-3 emojis, question engageante finale)",
+  "post": "texte du post (250-350 mots, hook puissant, storytelling, 2-3 emojis, question engageante finale)",
   "cta": "call to action court",
   "hashtags": "20 hashtags séparés par espaces, mix français/anglais, inclure #Armenie #Armenian #Armenia",
   "image_prompt": "prompt DALL-E en anglais uniquement. Scène visuelle épique représentant {topic}. Style photo cinématographique ultra-réaliste. Lumière dramatique dorée ou crépusculaire. Aucun texte, aucun titre, aucun logo dans l'image. Juste la scène."
