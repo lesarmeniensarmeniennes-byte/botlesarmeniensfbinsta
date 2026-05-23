@@ -43,4 +43,5 @@ jobs:
           git config user.email "bot@armenians.page"
           git add feed.xml images/ topics_used.json
           git diff --staged --quiet || git commit -m "📅 Post du $(date +%Y-%m-%d)"
-          git push
+          git pull --rebase origin main
+          git push origin main
